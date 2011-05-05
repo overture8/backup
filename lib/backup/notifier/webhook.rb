@@ -1,5 +1,14 @@
 # encoding: utf-8
 
+##
+# If the Ruby version of this process is 1.8.x or less
+# then use the JSON gem. Otherwise if the current process is running
+# Ruby 1.9.x or later then it is built in and we can load it from the Ruby core lib
+if RUBY_VERSION < '1.9.0'
+  Backup::Dependency.load('json')
+else
+  require 'json'
+end
 
 module Backup
   module Notifier
@@ -20,10 +29,6 @@ module Backup
       ##
       # Path to post back to
       attr_accessor :path
-
-      ##
-      # related object id
-      attr_accessor :related_object_id
 
       ##
       # Hash key for access to your app
@@ -63,41 +68,44 @@ module Backup
       # proceeded without any errors
       def notify_success!
         backup = {
-          :label => backup.label,
-          :file_path => Backup.file,
-          :start_time => backup.time,
-          :state => 'success',
-          :related_object_id => related_object_id
+          :backup_fields => {
+            :label_name => model.label,
+            :file_path => Backup::Model.file,
+            :start_time => model.time,
+            :end_time => Time.now,
+            :state => 'success'
+          }
         }
 
+        req = Net::HTTP::Post.new(path, initheader = {'Content-Type' =>'application/json'})
+        req.body = backup.to_json
         http = Net::HTTP.new(domain, port)
-        http.post(path, hash_to_querystring(backup))
+        response = Net::HTTP.new(domain, port).start {|http| http.request(req) }
       end
 
       ##
       # Sends a tweet informing the user that the backup operation
       # raised an exception
       def notify_failure!(exception)
-        # return a hash:
-        # backup = {
-        #   :label
-        #   :file_path
-        #   :start_time
-        #   :end_time
-        #   :size
-        #   :compressed?
-        #   :database
-        #   :state (success || failure)
-        # }
+        backup = {
+          :backup_fields => {
+            :label_name => model.label,
+            :file_path => Backup::Model.file,
+            :start_time => model.time,
+            :end_time => Time.now,
+            :state => 'failed'
+          }
+        }
 
+        req = Net::HTTP::Post.new(path, initheader = {'Content-Type' =>'application/json'})
+        req.body = backup.to_json
+        http = Net::HTTP.new(domain, port)
+        response = Net::HTTP.new(domain, port).start {|http| http.request(req) }
       end
 
-      def hash_to_querystring(hash)
-        hash.keys.inject('') do |query_string, key|
-          query_string << '&' unless key == hash.keys.first
-          query_string << "#{URI.encode(key.to_s)}=#{URI.encode(hash[key])}"
-        end
+      def set_defaults!
       end
+
     end
   end
 end
