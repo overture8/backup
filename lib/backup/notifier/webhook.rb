@@ -39,7 +39,6 @@ module Backup
       def initialize(&block)
         load_defaults!
         instance_eval(&block) if block_given?
-        set_defaults!
       end
 
       ##
@@ -76,10 +75,8 @@ module Backup
             :state => 'success'
           }
         }
-
         req = Net::HTTP::Post.new(path, initheader = {'Content-Type' =>'application/json'})
         req.body = backup.to_json
-        http = Net::HTTP.new(domain, port)
         response = Net::HTTP.new(domain, port).start {|http| http.request(req) }
       end
 
@@ -93,17 +90,14 @@ module Backup
             :file_path => Backup::Model.file,
             :start_time => model.time,
             :end_time => Time.now,
-            :state => 'failed'
+            :state => 'failed',
+            :exception => exception
           }
         }
 
         req = Net::HTTP::Post.new(path, initheader = {'Content-Type' =>'application/json'})
         req.body = backup.to_json
-        http = Net::HTTP.new(domain, port)
         response = Net::HTTP.new(domain, port).start {|http| http.request(req) }
-      end
-
-      def set_defaults!
       end
 
     end
