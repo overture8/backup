@@ -16,13 +16,17 @@ module Backup
     # Tries to find and load the configuration file and return the proper
     # backup model configuration (specified by the 'trigger')
     def find
-      unless File.exist?(config)
-        puts "Could not find a configuration file in '#{config}'."; exit
-      end
+      #unless File.exist?(config)
+      #  puts "Could not find a configuration file in '#{config}'."; exit
+      #end
 
       ##
       # Loads the backup configuration file
-      instance_eval(File.read(config))
+      unless config.is_a? Proc
+        instance_eval(File.read(config))
+      else
+        instance_eval(&config)
+      end
 
       ##
       # Iterates through all the instantiated backup models and returns
